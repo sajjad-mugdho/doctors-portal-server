@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { query } = require('express');
 require('dotenv').config()
 
 const port = process.env.PORT || 5000;
@@ -19,12 +20,13 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 function verifyJWT(req, res, next) {
-    const authHeder = req.headers.authorization;
-    if (!authHeder) {
-        return res.status(401).send('UnAuthorize Access')
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send('unauthorized access');
     }
 
-    const token = authHeder.split(" ")[1];
+
+    const token = authHeader.split(" ")[1];
     jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decode) {
         if (err) {
             return res.status(403).send({ message: "Forbiten Access" })
@@ -32,6 +34,8 @@ function verifyJWT(req, res, next) {
 
         req.decode = decode;
         next()
+
+
     })
 }
 
@@ -40,6 +44,7 @@ async function run() {
         const appointmentCollection = client.db('doctorPortal').collection('AppoinmentOption');
         const bookingsCollection = client.db('doctorPortal').collection('bookings');
         const usersCollection = client.db('doctorPortal').collection('users');
+        const doctorsCollection = client.db('doctorPortal').collection('doctors');
 
         app.get('/appointmentOptions', async (req, res) => {
             const date = req.query.date;
@@ -56,6 +61,12 @@ async function run() {
                 // console.log(date, option.name, remainingSlots.length);
             })
             res.send(options);
+        });
+
+        app.get('/appointmentSpecialty', async (req, res) => {
+            const query = {};
+            const result = await appointmentCollection.find(query).project({ name: 1 }).toArray();
+            res.send(result)
         })
 
         //Booking Apis
@@ -107,7 +118,7 @@ async function run() {
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === "admin" })
         });
-        
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
@@ -132,6 +143,21 @@ async function run() {
             }
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
+
+        })
+
+        // Doctors Collection Api
+
+        app.get('/doctors', async (req, res) => {
+            const quary = {};
+            const result = await doctorsCollection.find(quary).toArray();
+            res.send(result)
+        })
+
+        app.post('/doctors', async (req, res) => {
+            const doctor = req.body;
+            const result = await doctorsCollection.insertOne(doctor);
+            res.send(result)
 
         })
     }
