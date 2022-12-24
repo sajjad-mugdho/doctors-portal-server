@@ -28,6 +28,7 @@ function verifyJWT(req, res, next) {
 
 
     const token = authHeader.split(" ")[1];
+
     jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decode) {
         if (err) {
             return res.status(403).send({ message: "Forbiten Access" })
@@ -220,7 +221,7 @@ async function run() {
             const user = await usersCollection.findOne(query);
             if (user) {
                 const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: "1h" })
-                res.send({ accessToken: token })
+               return res.send({ accessToken: token })
 
             }
 
